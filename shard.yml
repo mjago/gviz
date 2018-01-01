@@ -1,0 +1,17 @@
+name: gviz
+version: 0.1.0
+
+authors:
+  - mjago <martyn.jago@btinternet.com>
+
+targets:
+  gviz:
+    main: src/gviz.cr
+
+crystal: 0.24.1+27
+
+dependencies:
+  graphviz:
+    github: mjago/graphviz.cr
+    branch: master
+license: MIT
