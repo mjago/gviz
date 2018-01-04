@@ -8,9 +8,11 @@ git clone https://github.com/mjago/gviz.git
 
 ## Usage
 
-shards install
-crystal build src/gviz.cr --release
-./gviz
+1. git clone https://github.com/mjago/gviz.git
+2. cd gviz
+3. shards install
+4. crystal build src/gviz.cr --release
+5. ./gviz
 
 ## Development
 
