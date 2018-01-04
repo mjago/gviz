@@ -4,15 +4,17 @@ TODO: Write a description here
 
 ## Installation
 
-TODO: Write installation instructions here
+git clone https://github.com/mjago/gviz.git
 
 ## Usage
 
-TODO: Write usage instructions here
+shards install
+crystal build src/gviz.cr --release
+./gviz
 
 ## Development
 
-TODO: Write development instructions here
+POC SHAInet ANN visualizer
 
 ## Contributing
 
