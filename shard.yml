@@ -12,7 +12,8 @@ crystal: 0.24.1+27
 
 dependencies:
   graphviz:
-    path: ../graphviz.cr
+    github: mjago/graphviz.cr
+    branch: master
   kemal:
     github: kemalcr/kemal
     version: ~> 0.22.0
