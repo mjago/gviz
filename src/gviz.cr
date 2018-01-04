@@ -1,8 +1,11 @@
 require "./gviz/*"
 require "graphviz"
+require "kemal"
 
 module Gviz
   class Visualizer
+    FONT = "Helvetica-Bold"
+
     property data : Data
 
     struct InOut
@@ -38,7 +41,8 @@ module Gviz
       end
     end
 
-    def initialize
+    def initialize(title = "graph")
+      @title = title
       @data = Data.new
       @graph = GraphViz.new(:G, type: :digraph)
       @nodes = Array(GraphViz::Node).new
@@ -65,40 +69,50 @@ module Gviz
     end
 
     def get_value(values, idx)
-      return "#{idx}" if values.empty?
+      return "#{idx + 1}" if values.empty?
       sprintf("%0.2f", values[idx])
     end
 
     def build_input
-      @graph.add_subgraph(@data.input.name, GraphViz.new("cluster_0", type: :subgraph)) do |inp|
-        inp[:label] = "#{@data.input.name} (#{@data.input.size})"
+      @graph.add_subgraph(@data.input.name, GraphViz.new("cluster_1", type: :subgraph)) do |inp|
+        inp[:label] = "#{@data.input.name}"
         inp[:labelloc] = "top"
         inp[:labeljust] = "center"
         inp[:style] = "filled"
-        inp[:fillcolor] = "green"
+        inp[:fillcolor] = "lightgreen:green"
+        inp[:gradientangle] = 270
+        inp[:fontname] = FONT
+        inp[:fontsize] = 20
         input_size = @data.input.size
         input_size.times do |x|
           val_s = get_value(@data.input.values, x)
-          @nodes << inp.add_node(x.to_s, label: val_s, style: "filled", color: "green", fillcolor: "lightblue")
+          @nodes << inp.add_node(x.to_s, label: val_s, style: "filled",
+            color: "midnightblue", fillcolor: "orange:firebrick", fontname: FONT)
+          puts
+          puts
         end
       end
     end
 
     def build_hidden
-      @graph.add_subgraph("hide", GraphViz.new("cluster_1", type: :subgraph)) do |hide|
+      @graph.add_subgraph("hide", GraphViz.new("cluster_2", type: :subgraph)) do |hide|
         hide[:label] = ""
-        hide[:style] = "filled"
-        hide[:fillcolor] = "lightgrey"
+        hide[:style] = "radial"
+        hide[:fillcolor] = "lavenderblush:dimgrey"
+        hide[:gradientangle] = 0
+        hide[:fontname] = FONT
+        hide[:fontsize] = 20
+        hide[:color] = "midnightblue"
         offset = @data.input.size
         hidden_count = @data.hidden.count
         hidden_sizes = @data.hidden.sizes
         hidden_count.times do |x|
           size = hidden_sizes[x]
           size.times do |y|
-            val = @data.hidden.values[x].empty? ? "" : @data.hidden.values[x][y]
+            val = @data.hidden.values[x].empty? ? 0.0 : @data.hidden.values[x][y]
             val_s = sprintf("%0.2f", val)
-            @nodes << hide.add_node((offset + y).to_s, label: val_s, style: "filled",
-                                    color: "blue", fillcolor: "cyan")
+            @nodes << hide.add_node((offset + y).to_s, label: val_s, fontcolor: "gray7", style: "filled", gradientangle: 33,
+              color: "midnightblue", fillcolor: "yellow;#{val}:deepskyblue1", fontname: FONT)
           end
           offset += size
         end
@@ -106,19 +120,22 @@ module Gviz
     end
 
     def build_output
-      @graph.add_subgraph(@data.output.name, GraphViz.new("cluster_2", type: :subgraph)) do |outp|
-        outp[:label] = "#{@data.output.name} (#{@data.output.size})"
+      @graph.add_subgraph(@data.output.name, GraphViz.new("cluster_3", type: :subgraph)) do |outp|
+        outp[:label] = "#{@data.output.name}"
         outp[:labelloc] = "bottom"
         outp[:labeljust] = "center"
         outp[:style] = "filled"
-        outp[:fillcolor] = "green"
+        outp[:fillcolor] = "lightgreen:green"
+        outp[:gradientangle] = 90
+        outp[:fontname] = FONT
+        outp[:fontsize] = 20
         output_size = @data.output.size
         output_size.times do |x|
           val_s = get_value(@data.output.values, x)
           hidden_size = @data.hidden.sizes.sum
           offset = @data.input.size + hidden_size
           @nodes << outp.add_node((offset + x).to_s, label: val_s, style: "filled",
-            color: "blue", fillcolor: "orange")
+            color: "midnightblue", fillcolor: "orange:firebrick", fontname: FONT)
         end
       end
     end
@@ -130,7 +147,11 @@ module Gviz
         first_hidden_size.times do |y|
           offset = 0
           @graph.add_edge(@nodes[offset + x], @nodes[offset + @data.input.size + y],
-            color: "lightgrey", arrowsize: 1, arrowhead: "empty", style: "dotted")
+            color: "steelblue4",
+            arrowsize: 0.7,
+            arrowhead: "normal",
+            headport: "n",
+            tailport: "s")
         end
       end
     end
@@ -146,7 +167,11 @@ module Gviz
         size1.times do |y|
           size2.times do |z|
             @graph.add_edge(@nodes[offset + y], @nodes[offset + size1 + z],
-              color: "lightgrey", arrowsize: 1, arrowhead: "none", style: "dotted")
+              color: "cornsilk4",
+              arrowsize: 0.7,
+              arrowhead: "none",
+              headport: "n",
+              tailport: "s")
           end
         end
         offset += size1
@@ -161,23 +186,40 @@ module Gviz
         output_size.times do |y|
           offset = @data.input.size + hidden_size
           @graph.add_edge(@nodes[offset - last_hidden_size + x], @nodes[offset + y],
-            color: "lightgrey", arrowsize: 1, arrowhead: "empty", style: "dotted")
+            color: "steelblue4",
+            arrowsize: 0.7,
+            arrowhead: "normal",
+            headport: "n",
+            tailport: "s")
         end
       end
     end
 
-    def build
-      @graph[:label] = "Graph"
-      @graph[:style] = "filled"
-      @graph[:color] = "red"
-      @graph[:labelloc] = "top"
-      @graph[:splines] = "line"
+    def build_clusters
       build_input
       build_hidden
       build_output
+    end
+
+    def build_edges
       build_input_edges
       build_hidden_edges
       build_output_edges
+    end
+
+    def build
+      @graph[:labelloc] = "top"
+      @graph[:splines] = "line"
+      @graph[:bgcolor] = "lavender"
+      @graph[:fontname] = FONT
+      @graph[:fontcolor] = "grey8"
+      @graph[:fontsize] = 20
+      @graph[:label] = @title
+      @graph[:nodesep] = 0.5
+      @graph[:ranksep] = 0.5
+
+      build_clusters
+      build_edges
     end
 
     def to_s
@@ -185,23 +227,72 @@ module Gviz
     end
 
     def generate
-      `echo '#{@graph.to_s}' | dot -Tsvg -otemp.svg && xsltproc --novalid notugly.xsl temp.svg >test.svg`
+      `echo '#{to_s}' | dot -Tsvg -opublic/test.svg`
+    end
+
+    def svg
+      temp = `echo '#{to_s}' | dot -Tsvg`
+      puts temp
+      "'" + temp + "'"
+    end
+
+    def delete_hidden
+      @graph.delete_subgraph("hidden")
+    end
+
+    def debug
+      p @graph
     end
   end
 end
 
-gv = Gviz::Visualizer.new
-gv.input = {name: "Input",
-            size: 8,
-            values: [0.1, 0.2, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]}
-gv.hidden = {count:  4,
-             sizes:  [12, 14, 10, 8],
-             values: [[0.1, 0.2, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3],
-                      [0.1, 0.2, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3],
-                      [0.1, 0.2, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3],
-                      [0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3]]}
-gv.output = {name:   "Output",
-             size:   5,
-             values: [0.1, 0.2, 0.3, 0.2, 0.3]}
+INPUT_SIZE = 6
+HIDDEN_COUNT = 4
+HIDDEN_SIZE = 6
+OUTPUT_SIZE = 3
+
+accumulators = Array.new(HIDDEN_COUNT) { Array.new(HIDDEN_SIZE) { Random.rand(1.0) } }
+gv = Gviz::Visualizer.new("Kemal Demo\n\n")
+gv.input = {name: "Inputs",
+            size: 6}
+gv.hidden = {count:  HIDDEN_COUNT,
+             sizes:  Array.new(HIDDEN_COUNT) { HIDDEN_SIZE },
+             values: accumulators}
+gv.output = {name: "Outputs",
+             size: OUTPUT_SIZE}
 gv.build
 gv.generate
+
+spawn do
+  loop do
+    HIDDEN_COUNT.times do |x|
+      HIDDEN_SIZE.times do |y|
+        if Random.rand(1.0) > 0.5
+          if (accumulators[x][y] + 0.05).round(3) < 0.95
+            accumulators[x][y] = (accumulators[x][y] + 0.05).round(3)
+          end
+        else
+          if (accumulators[x][y] - 0.05).round(3) > 0.05
+            accumulators[x][y] = (accumulators[x][y] - 0.05).round(3)
+          end
+        end
+        Fiber.yield
+      end
+      Fiber.yield
+    end
+
+    gv.delete_hidden
+    gv.hidden = {count:  HIDDEN_COUNT,
+                 sizes:  Array.new(HIDDEN_COUNT) { HIDDEN_SIZE },
+                 values: accumulators}
+    gv.build_hidden
+    gv.generate
+    sleep 1.0
+  end
+end
+
+get "/" do |env|
+  env.redirect "/index.html"
+end
+
+Kemal.run

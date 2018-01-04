@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+  <body height="100%" margin="0" bgcolor="#E6E6FA">
+    <div>&nbsp;</div>
+    <image src="test.svg" alt=" Kemal not Running! " id="svg">
+    <script>
+      setInterval(function() {
+        var myImageElement = document.getElementById('svg');
+        myImageElement.src = 'test.svg?rand=' + Math.random();
+      }, 1000);
+    </script>
+  </body>
+</html>
