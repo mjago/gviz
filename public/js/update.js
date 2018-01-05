@@ -25,7 +25,7 @@ function update(retries) {
         console.log("ready");
         setColorById("status", "green")
         var myImageElement = document.getElementById('svg');
-        myImageElement.src = 'test.svg?rand=' + Math.random();
+        myImageElement.src = 'svg/nodes.svg?rand=' + Math.random();
       }
       else if(data == "busy") {
         console.log("busy");

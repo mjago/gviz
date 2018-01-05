@@ -1,19 +1,18 @@
 require "./src/*"
 
 # RANDOM true = random, RANDOM false = sequential
-RANDOM = false
+RANDOM = true
 
 INPUT_SIZE = 6
-HIDDEN_COUNT = 4
-HIDDEN_SIZES = [4, 6, 10, 12]
-OUTPUT_SIZE = 14
-INTERVAL = 2
-
-server = Server.new
+HIDDEN_COUNT = 2
+HIDDEN_SIZES = [6, 8]
+OUTPUT_SIZE = 4
+INTERVAL = 1
 
 subcount = HIDDEN_COUNT
 accumulators = Array.new(HIDDEN_COUNT) { |x| Array.new(HIDDEN_SIZES[x]) { |y| Random.rand(0.95) } }
-gv = Gviz::Visualizer.new("Sequential Ordering\n\n")
+server = Server.new
+gv = Gviz::Visualizer.new("Testing Testing\n\n")
 gv.input = {name: "Inputs",
             size: INPUT_SIZE}
 gv.hidden = {count:  HIDDEN_COUNT,
@@ -21,8 +20,7 @@ gv.hidden = {count:  HIDDEN_COUNT,
              values: accumulators}
 gv.output = {name: "Outputs",
              size: OUTPUT_SIZE}
-gv.build
-gv.generate
+gv.start
 
 if RANDOM
   spawn do
@@ -44,6 +42,7 @@ if RANDOM
       gv.hidden = { count: HIDDEN_COUNT,
                     sizes: HIDDEN_SIZES,
                     values: accumulators }
+
       server.ready = false
       gv.build_hidden
       gv.generate

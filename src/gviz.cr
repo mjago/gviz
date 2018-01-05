@@ -5,6 +5,8 @@ require "kemal"
 module Gviz
   class Visualizer
     FONT = "Helvetica-Bold"
+    SVG = "public/svg/nodes.svg"
+    DOT_COMMAND = "dot"
 
     property data : Data
 
@@ -253,12 +255,20 @@ module Gviz
       @graph.to_s
     end
 
-    def cmd(format, outfile = "")
-      `echo '#{to_s}' | dot -T#{format} #{"-o#{outfile}" unless outfile.empty?}`
+    def outfile
+    end
+
+    def cmd(format = "plain", outfile = "")
+      `echo '#{to_s}' | #{DOT_COMMAND} -T#{format} -o#{outfile}`
+    end
+
+    def start
+      build
+      generate
     end
 
     def generate
-      cmd "svg", "public/test.svg"
+      cmd("svg", SVG)
     end
 
     def extract_node_order(map, sub, sizes)
@@ -279,8 +289,6 @@ module Gviz
     end
 
     def build_mapping
-      # parse mapping
-      cmd = `echo '#{to_s}' | dot -Tplain`
       viz = cmd.split("\n")
       viz.shift
 
@@ -308,6 +316,11 @@ module Gviz
         end
         offset += sizes[sub]
       end
+    end
+
+    def update
+      delete_hidden
+      generate
     end
 
     def delete_hidden
