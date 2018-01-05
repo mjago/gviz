@@ -93,7 +93,7 @@ module Gviz
         inp[:labelloc] = "top"
         inp[:labeljust] = "center"
         inp[:style] = "filled"
-        inp[:fillcolor] = "lightgreen:green"
+        inp[:fillcolor] = "red:green"
         inp[:gradientangle] = 270
         inp[:fontname] = FONT
         inp[:fontsize] = 20
@@ -102,8 +102,6 @@ module Gviz
           val_s = build_label(@data.input.values, @data.mapping.input[x])
           @nodes << inp.add_node(x.to_s, label: val_s, style: "filled",
             color: "midnightblue", fillcolor: "orange:firebrick", fontname: FONT)
-          puts
-          puts
         end
       end
     end
@@ -121,15 +119,13 @@ module Gviz
         hidden_count = @data.hidden.count
         hidden_sizes = @data.hidden.sizes
         hidden_count.times do |x|
-          size = hidden_sizes[x]
-          size.times do |y|
-#            val = @data.hidden.values[x][y]
+          hidden_sizes[x].times do |y|
             val = @data.hidden.values[x][@data.mapping.hidden[x][y]]
-            val_s = sprintf("%0.2f", val)
+            val_s = build_label(@data.hidden.values[x], @data.mapping.hidden[x][y])
             @nodes << hide.add_node((offset + y).to_s, label: val_s, fontcolor: "gray7", style: "filled", gradientangle: 33,
-              color: "midnightblue", fillcolor: "yellow;#{val}:deepskyblue1", fontname: FONT)
+                                    color: "midnightblue", fillcolor: "yellow;#{val}:deepskyblue1", fontname: FONT)
           end
-          offset += size
+          offset += hidden_sizes[x]
         end
       end
     end
@@ -140,7 +136,7 @@ module Gviz
         outp[:labelloc] = "bottom"
         outp[:labeljust] = "center"
         outp[:style] = "filled"
-        outp[:fillcolor] = "lightgreen:green"
+        outp[:fillcolor] = "red:green"
         outp[:gradientangle] = 90
         outp[:fontname] = FONT
         outp[:fontsize] = 20
@@ -257,11 +253,29 @@ module Gviz
       @graph.to_s
     end
 
+    def cmd(format, outfile = "")
+      `echo '#{to_s}' | dot -T#{format} #{"-o#{outfile}" unless outfile.empty?}`
+    end
+
     def generate
-      `echo '#{to_s}' | dot -Tsvg -opublic/test.svg`
-      cmd = `echo '#{to_s}' | dot -Tplain`
-      viz = cmd.split("\n")
-      p viz
+      cmd "svg", "public/test.svg"
+    end
+
+    def extract_node_order(map, sub, sizes)
+      # convert to order
+      temp = Array(Int32).new
+      sizes[sub].times do |x|
+        idx = map.index(map.min).not_nil!
+        temp << idx
+        map[idx] = Float64::MAX
+      end
+      temp2 = Array(Int32).new
+      sizes[sub].times do |x|
+        idx = temp.index(temp.min).not_nil!
+        temp2 << idx
+        temp[idx] = Int32::MAX
+      end
+      temp2
     end
 
     def build_mapping
@@ -270,44 +284,30 @@ module Gviz
       viz = cmd.split("\n")
       viz.shift
 
-      mapping = Mapping.new
+      @data.mapping = Mapping.new
       offset = 0
       sizes = [@data.input.size]
-      @data.hidden.count.times { sizes << @data.hidden.sizes[0] }
+      @data.hidden.count.times { |x| sizes << @data.hidden.sizes[x] }
       sizes << @data.output.size
-      hidden_mapping = Array(Array(Int32)).new
       sub_count = 2 + @data.hidden.count
       sub_count.times do |sub|
         map = Array(Float64).new
-        sizes[sub].times do |x|
+        (sizes[sub]).times do |x|
           map << viz[offset + x].split(" ")[2].to_f64
         end
-        offset += sizes[sub]
-
-        # convert to order
-        temp = Array(Int32).new
-        sizes[sub].times do |x|
-          idx = map.index(map.min).not_nil!
-          temp << idx
-          map[idx] = Float64::MAX
-        end
+        order = extract_node_order(map, sub, sizes)
         case sub
         when 0
-          puts "input_size"
-          mapping.input = temp
+          @data.mapping.input = order
         when 1 + @data.hidden.count
-          puts "output size"
-          mapping.output = temp
-        else
-          puts "hidden size"
-          print "temp: "
-          p temp
-          hidden_mapping << temp
+          @data.mapping.output = order
+        else # hidden
+          (sizes[sub]).times do |x|
+          end
+          @data.mapping.hidden << order
         end
+        offset += sizes[sub]
       end
-      mapping.hidden = hidden_mapping
-      @data.mapping = mapping
-      p @data.mapping
     end
 
     def delete_hidden
@@ -330,14 +330,9 @@ module Gviz
         temp << x
       end
       @data.mapping.output = temp
-
-      hidden_mapping = [] of Array(Int32)
+      hidden_mapping = Array(Array(Int32)).new
       @data.hidden.count.times do |x|
-        temp = [] of Int32
-        @data.hidden.sizes[x].times do |y|
-          temp << y
-        end
-        hidden_mapping << temp
+        hidden_mapping << Array.new(@data.hidden.sizes[x]) { |x| x }
       end
       @data.mapping.hidden = hidden_mapping
     end
@@ -358,54 +353,36 @@ end
 
 INPUT_SIZE = 6
 HIDDEN_COUNT = 4
-HIDDEN_SIZE = 4
-OUTPUT_SIZE = 2
+HIDDEN_SIZES = [4, 5, 6, 8]
+OUTPUT_SIZE = 4
 
-accumulators = Array.new(HIDDEN_COUNT) { Array.new(HIDDEN_SIZE) { Random.rand(0.95) } }
+subcount = HIDDEN_COUNT
+accumulators = Array.new(HIDDEN_COUNT) { |x| Array.new(HIDDEN_SIZES[x]) { |y| Random.rand(0.95) } }
 gv = Gviz::Visualizer.new("Sequential Ordering\n\n")
 gv.input = {name: "Inputs",
             size: INPUT_SIZE}
 gv.hidden = {count:  HIDDEN_COUNT,
-             sizes:  Array.new(HIDDEN_COUNT) { HIDDEN_SIZE },
+             sizes: HIDDEN_SIZES,
              values: accumulators}
 gv.output = {name: "Outputs",
              size: OUTPUT_SIZE}
 gv.build
 gv.generate
 
-low_hidden_count = (HIDDEN_COUNT / 2) - 1
-high_count = low_hidden_count + 1
-
 ready = false
 spawn do
   loop do
+    offset = 0
     HIDDEN_COUNT.times do |count|
-      HIDDEN_SIZE.times do |size|
-        accumulators[count][size] = (count * HIDDEN_SIZE + size).to_f64  / 100.0
-        Fiber.yield
+      HIDDEN_SIZES[count].times do |size|
+        accumulators[count][size] = (offset + size).to_f64  / 100.0
       end
-      Fiber.yield
+      offset += HIDDEN_SIZES[count]
     end
-#    HIDDEN_SIZE.times do |size|
-#      HIDDEN_COUNT.times do |count|
-#        if Random.rand(1.0) > 0.5
-#          if (accumulators[count][size] + 0.05).round(3) < 0.95
-#            accumulators[count][size] = (accumulators[count][size] + 0.05).round(3)
-#          end
-#        else
-#          if (accumulators[count][size] - 0.05).round(3) > 0.05
-#            accumulators[count][size] = (accumulators[count][size] - 0.05).round(3)
-#          end
-#        end
-#        Fiber.yield
-#      end
-#      Fiber.yield
-#    end
-
     gv.delete_hidden
-    gv.hidden = {count:  HIDDEN_COUNT,
-                 sizes:  Array.new(HIDDEN_COUNT) { HIDDEN_SIZE },
-                 values: accumulators}
+    gv.hidden = { count: HIDDEN_COUNT,
+                  sizes: HIDDEN_SIZES,
+                  values: accumulators }
     ready = false
     gv.build_hidden
     gv.generate
@@ -423,3 +400,19 @@ get "/isready" do |env|
 end
 
 Kemal.run
+
+#    HIDDEN_SIZE.times do |size|
+#      HIDDEN_COUNT.times do |count|
+#        if Random.rand(1.0) > 0.5
+#          if (accumulators[count][size] + 0.05).round(3) < 0.95
+#            accumulators[count][size] = (accumulators[count][size] + 0.05).round(3)
+#          end
+#        else
+#          if (accumulators[count][size] - 0.05).round(3) > 0.05
+#            accumulators[count][size] = (accumulators[count][size] - 0.05).round(3)
+#          end
+#        end
+#        Fiber.yield
+#      end
+#      Fiber.yield
+#    end
