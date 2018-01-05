@@ -93,7 +93,7 @@ module Gviz
         inp[:labelloc] = "top"
         inp[:labeljust] = "center"
         inp[:style] = "filled"
-        inp[:fillcolor] = "red:green"
+        inp[:fillcolor] = "springgreen3:green"
         inp[:gradientangle] = 270
         inp[:fontname] = FONT
         inp[:fontsize] = 20
@@ -136,7 +136,7 @@ module Gviz
         outp[:labelloc] = "bottom"
         outp[:labeljust] = "center"
         outp[:style] = "filled"
-        outp[:fillcolor] = "red:green"
+        outp[:fillcolor] = "springgreen3:green"
         outp[:gradientangle] = 90
         outp[:fontname] = FONT
         outp[:fontsize] = 20
@@ -338,81 +338,3 @@ module Gviz
     end
   end
 end
-
-def load_acc(accumulators, count, size)
-  if Random.rand(1.0) > 0.5
-    if (accumulators[count][size] + 0.05).round(3) < 0.95
-      accumulators[count][size] = (accumulators[count][size] + 0.05).round(3)
-    end
-  else
-    if (accumulators[count][size] - 0.05).round(3) > 0.05
-      accumulators[count][size] = (accumulators[count][size] - 0.05).round(3)
-    end
-  end
-end
-
-INPUT_SIZE = 6
-HIDDEN_COUNT = 4
-HIDDEN_SIZES = [4, 5, 6, 8]
-OUTPUT_SIZE = 4
-
-subcount = HIDDEN_COUNT
-accumulators = Array.new(HIDDEN_COUNT) { |x| Array.new(HIDDEN_SIZES[x]) { |y| Random.rand(0.95) } }
-gv = Gviz::Visualizer.new("Sequential Ordering\n\n")
-gv.input = {name: "Inputs",
-            size: INPUT_SIZE}
-gv.hidden = {count:  HIDDEN_COUNT,
-             sizes: HIDDEN_SIZES,
-             values: accumulators}
-gv.output = {name: "Outputs",
-             size: OUTPUT_SIZE}
-gv.build
-gv.generate
-
-ready = false
-spawn do
-  loop do
-    offset = 0
-    HIDDEN_COUNT.times do |count|
-      HIDDEN_SIZES[count].times do |size|
-        accumulators[count][size] = (offset + size).to_f64  / 100.0
-      end
-      offset += HIDDEN_SIZES[count]
-    end
-    gv.delete_hidden
-    gv.hidden = { count: HIDDEN_COUNT,
-                  sizes: HIDDEN_SIZES,
-                  values: accumulators }
-    ready = false
-    gv.build_hidden
-    gv.generate
-    ready = true
-    sleep 1
-  end
-end
-
-get "/" do |env|
-  env.redirect "/index.html"
-end
-
-get "/isready" do |env|
-  ready ? "ready" : "busy"
-end
-
-Kemal.run
-
-#    HIDDEN_SIZE.times do |size|
-#      HIDDEN_COUNT.times do |count|
-#        if Random.rand(1.0) > 0.5
-#          if (accumulators[count][size] + 0.05).round(3) < 0.95
-#            accumulators[count][size] = (accumulators[count][size] + 0.05).round(3)
-#          end
-#        else
-#          if (accumulators[count][size] - 0.05).round(3) > 0.05
-#            accumulators[count][size] = (accumulators[count][size] - 0.05).round(3)
-#          end
-#        end
-#        Fiber.yield
-#      end
-#      Fiber.yield
-#    end
