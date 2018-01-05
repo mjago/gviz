@@ -1,13 +1,62 @@
 <!DOCTYPE html>
 <html>
-  <body height="100%" margin="0" bgcolor="#E6E6FA">
-    <div>&nbsp;</div>
-    <image src="test.svg" alt=" Kemal not Running! " id="svg">
+  <head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
     <script>
+      function setColorById(id,sColor) {
+        var elem;
+        if (document.getElementById) {
+          if (elem=document.getElementById(id)) {
+            if (elem.style) {
+              if(sColor == "green") {
+                elem.style.color=sColor;
+                elem.textContent="SHAInet is Running!";
+              }
+              else {
+                elem.style.color=sColor;
+                elem.textContent="SHAInet is Not Running!";
+              }
+            }
+          }
+        }
+      }
+      function update(retries) {
+        $.ajax({
+          type: "GET",
+          url: "/isready",
+          success: function (data, status, jqXHR) {
+            console.log("success: " + data);
+            if(data == "ready") {
+              console.log("ready");
+              setColorById("status", "green")
+              var myImageElement = document.getElementById('svg');
+              myImageElement.src = 'test.svg?rand=' + Math.random();
+            }
+            else if(data == "busy") {
+              console.log("busy");
+              retries += 1;
+              if(retries < 3) {
+                setTimeout(function() {
+                  console.log("retrying");
+                  update(retries);
+                }, 100);
+              };
+            };
+          },
+          error: function (jqXHR, status) {
+            setColorById("status", "red");
+            console.log("aborted");
+          }
+        });
+      }
       setInterval(function() {
-        var myImageElement = document.getElementById('svg');
-        myImageElement.src = 'test.svg?rand=' + Math.random();
+        update(0);
       }, 1000);
-    </script>
+          </Script>
+  </head>
+  <body height="100%" margin="0" bgcolor="#E6E6FA">
+    <image src="test.svg" alt=" Kemal not Running! " id="svg"/>
+    <div>&nbsp;</div>
+    <p style="color:red" id="status">SHAInet Not running!</p>
   </body>
 </html>
